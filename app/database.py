@@ -1,35 +1,19 @@
 """数据库配置和连接管理"""
-import os
 from contextlib import asynccontextmanager
 from tortoise import Tortoise
-from pydantic_settings import BaseSettings
 
+# 导入配置
+from app.configs.config import config
 
-class DatabaseSettings(BaseSettings):
-    """数据库配置设置"""
-    database_url: str = os.getenv("DATABASE_URL", "postgres://postgres:qwer1234@localhost:5432/consumer_assistant_db")
-    database_type: str = os.getenv("DATABASE_TYPE", "postgres")
-    database_host: str = os.getenv("DATABASE_HOST", "localhost")
-    database_port: int = int(os.getenv("DATABASE_PORT", "5432"))
-    database_user: str = os.getenv("DATABASE_USER", "postgres")
-    database_password: str = os.getenv("DATABASE_PASSWORD", "qwer1234")
-    database_name: str = os.getenv("DATABASE_NAME", "consumer_assistant_db")
-    
-    class Config:
-        env_file = ".env"
-        case_sensitive = False
-        extra = "allow"  # 允许额外的环境变量
-
-
-# 全局数据库设置实例
-db_settings = DatabaseSettings()
+# 使用全局配置作为数据库设置
+db_settings = config
 
 
 def get_tortoise_config() -> dict:
     """获取Tortoise ORM配置"""
     return {
         "connections": {
-            "default": db_settings.database_url
+            "default": db_settings.DATABASE_URL
         },
         "apps": {
             "models": {
@@ -77,7 +61,7 @@ async def check_database_connection():
     try:
         # 尝试连接数据库
         await init_db()
-        print(f"数据库 {db_settings.database_name} 连接成功")
+        print(f"数据库 {db_settings.DATABASE_NAME} 连接成功")
         return True
     except Exception as e:
         print(f"数据库连接错误: {e}")

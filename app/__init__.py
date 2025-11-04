@@ -1,12 +1,10 @@
 """FastAPI应用初始化 - MVC架构"""
-import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
-from dotenv import load_dotenv
 
-# 加载环境变量
-load_dotenv()
+# 导入配置
+from app.configs.config import config
 
 # 导入数据库配置和操作
 from app.database import init_db, close_db, check_database_connection
@@ -37,18 +35,19 @@ async def lifespan(app: FastAPI):
 
 # 初始化FastAPI应用，启用API文档接口
 fastapi_app = FastAPI(
-    title="Consumer Assistant API",
+    title=config.APP_NAME + " API",
     description="智能消费分析助手应用 - FastAPI + Tortoise ORM架构",
     version="1.0.0",
     lifespan=lifespan,  # 添加生命周期管理
     docs_url="/docs",  # Swagger UI文档地址
-    redoc_url="/redoc"  # ReDoc文档地址
+    redoc_url="/redoc",  # ReDoc文档地址
+    debug=config.DEBUG
 )
 
 # 配置CORS
 fastapi_app.add_middleware(
     CORSMiddleware,
-    allow_origins=[os.getenv("ALLOW_ORIGINS", "*")],  # 从环境变量读取
+    allow_origins=[config.ALLOW_ORIGINS],  # 从配置中读取
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
