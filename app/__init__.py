@@ -11,8 +11,9 @@ load_dotenv()
 # 导入数据库配置和操作
 from app.database import init_db, close_db, check_database_connection
 
-# 导入API路由
+# 导入API路由和响应函数
 from app.api import api_router
+from app.configs.response import success_response
 
 
 @asynccontextmanager
@@ -34,16 +35,18 @@ async def lifespan(app: FastAPI):
     print("数据库连接已关闭")
 
 
-# 初始化FastAPI应用
-app = FastAPI(
+# 初始化FastAPI应用，启用API文档接口
+fastapi_app = FastAPI(
     title="Consumer Assistant API",
     description="智能消费分析助手应用 - FastAPI + Tortoise ORM架构",
     version="1.0.0",
-    lifespan=lifespan  # 添加生命周期管理
+    lifespan=lifespan,  # 添加生命周期管理
+    docs_url="/docs",  # Swagger UI文档地址
+    redoc_url="/redoc"  # ReDoc文档地址
 )
 
 # 配置CORS
-app.add_middleware(
+fastapi_app.add_middleware(
     CORSMiddleware,
     allow_origins=[os.getenv("ALLOW_ORIGINS", "*")],  # 从环境变量读取
     allow_credentials=True,
@@ -52,23 +55,31 @@ app.add_middleware(
 )
 
 # 注册API路由
-app.include_router(api_router)
+fastapi_app.include_router(api_router)
 
 # 根路径
-@app.get("/")
+@fastapi_app.get("/")
 async def root():
-    return {"message": "Consumer Assistant API", "status": "running"}
+    return success_response(
+        message="Consumer Assistant API 运行中",
+        data={"status": "running"}
+    )
 
 # 健康检查端点
-@app.get("/health")
+@fastapi_app.get("/health")
 async def health_check():
-    return {"status": "healthy", "service": "Consumer Assistant API"}
+    return success_response(
+        message="服务健康状态正常",
+        data={"status": "healthy", "service": "Consumer Assistant API"}
+    )
 
-# 导入控制器以注册路由
-from app.controllers import *
+# 控制器将通过单独的路由模块注册，避免循环导入
 
 # 导入数据库配置
 from app.database import check_database_connection
 
 # 导入模型模块（目前为空）
 import app.models
+
+# 导出FastAPI应用实例
+app = fastapi_app

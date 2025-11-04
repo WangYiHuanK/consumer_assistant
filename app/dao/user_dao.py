@@ -1,6 +1,6 @@
 """用户数据访问对象"""
 from typing import List, Optional
-from app.models.user import User, User_Pydantic
+from app.models.user import User
 
 
 class UserDAO:

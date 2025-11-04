@@ -4,6 +4,7 @@ __pycache__/
 *$py.class
 *.so
 .Python
+.ipynb
 
 # Virtual environments
 venv/
@@ -59,3 +60,6 @@ dist/
 # Temporary files
 *.tmp
 *.temp
+
+# Unit tests
+test/

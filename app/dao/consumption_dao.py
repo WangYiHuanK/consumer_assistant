@@ -2,7 +2,7 @@
 from typing import List, Optional
 from datetime import datetime, date
 from tortoise.expressions import Q
-from app.models.consumption import Consumption, Consumption_Pydantic
+from app.models.consumption import Consumption
 
 
 class ConsumptionDAO:

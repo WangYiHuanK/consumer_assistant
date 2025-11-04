@@ -1,6 +1,6 @@
 """消费行为模型定义"""
 from tortoise import fields
-from tortoise.contrib.pydantic import pydantic_model_creator
+
 from datetime import datetime, date
 from .base import BaseModel
 
@@ -29,7 +29,5 @@ class Consumption(BaseModel):
         return f"Consumption(id={self.id}, user_id={self.user_id}, type={self.transaction_type}, amount={self.amount})"
 
 
-# Pydantic模型用于数据验证和序列化
-Consumption_Pydantic = pydantic_model_creator(Consumption, name="Consumption")
-ConsumptionCreate_Pydantic = pydantic_model_creator(Consumption, name="ConsumptionCreate", exclude_readonly=True)
-ConsumptionUpdate_Pydantic = pydantic_model_creator(Consumption, name="ConsumptionUpdate", exclude_readonly=True, exclude=["id", "user_id", "created_at"])
+# 已迁移到 schemas 模块中定义
+# 请使用 from app.schemas.consumption_schemas import Consumption, ConsumptionCreate, ConsumptionUpdate

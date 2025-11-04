@@ -1,10 +1,10 @@
 """数据模型包"""
 from .base import BaseModel
-from .user import User, User_Pydantic, UserCreate_Pydantic, UserUpdate_Pydantic
-from .consumption import Consumption, Consumption_Pydantic, ConsumptionCreate_Pydantic, ConsumptionUpdate_Pydantic
+from .user import User
+from .consumption import Consumption
 
 __all__ = [
     "BaseModel",
-    "User", "User_Pydantic", "UserCreate_Pydantic", "UserUpdate_Pydantic",
-    "Consumption", "Consumption_Pydantic", "ConsumptionCreate_Pydantic", "ConsumptionUpdate_Pydantic"
+    "User",
+    "Consumption"
 ]
