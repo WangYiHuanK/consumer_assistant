@@ -1,6 +1,7 @@
 """用户数据访问对象"""
-from typing import List, Optional
+from typing import Optional, List
 from app.models.user import User
+from app.database import ensure_db_connection
 
 
 class UserDAO:
@@ -9,21 +10,25 @@ class UserDAO:
     @staticmethod
     async def get_by_id(user_id: int) -> Optional[User]:
         """根据ID获取用户"""
+        await ensure_db_connection()
         return await User.get_or_none(id=user_id, is_deleted=False)
     
     @staticmethod
     async def get_by_phone(phone: str) -> Optional[User]:
         """根据手机号获取用户"""
+        await ensure_db_connection()
         return await User.get_or_none(phone=phone, is_deleted=False)
     
     @staticmethod
     async def create(user_data: dict) -> User:
         """创建用户"""
+        await ensure_db_connection()
         return await User.create(**user_data)
     
     @staticmethod
     async def update(user_id: int, update_data: dict) -> Optional[User]:
         """更新用户信息"""
+        await ensure_db_connection()
         user = await User.get_or_none(id=user_id, is_deleted=False)
         if user:
             await user.update_from_dict(update_data)
@@ -33,6 +38,7 @@ class UserDAO:
     @staticmethod
     async def delete(user_id: int) -> bool:
         """软删除用户"""
+        await ensure_db_connection()
         user = await User.get_or_none(id=user_id, is_deleted=False)
         if user:
             await user.soft_delete()

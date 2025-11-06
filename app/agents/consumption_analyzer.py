@@ -1,9 +1,11 @@
 """消费行为分析和任务规划模块"""
+import os
 from typing import List, Dict, Any
 from datetime import date, datetime
 from app.models.consumption import Consumption
 from app.agents.agents import llm
 from app.agents.mcp_tool import save_markdown_and_convert_to_pdf
+from app.utils.chart_generator import get_chart_generator
 
 
 # 消费分析提示词模板
@@ -143,6 +145,58 @@ def analyze_and_plan(user_id: int, consumptions: List[Consumption], save_to_file
     # 生成任务规划
     plan = generate_task_plan(analysis)
     
+    # 初始化图表相关内容
+    chart_sections = ""
+    chart_paths = []
+    
+    # 保存为文件（如果启用）
+    if save_to_files:
+        # 生成文件名前缀，包含用户ID和时间戳
+        filename_prefix = f"user_{user_id}_analysis_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        
+        # 使用MCP工具获取工作空间目录
+        temp_file_paths = save_markdown_and_convert_to_pdf("", filename_prefix)
+        workspace_dir = temp_file_paths["workspace_dir"]
+        
+        # 生成图表
+        chart_generator = get_chart_generator(workspace_dir)
+        chart_paths = chart_generator.generate_all_charts(consumptions)
+        
+        # 构建图表部分的Markdown内容，使用更清晰的文件路径处理
+        chart_sections = "## 消费数据可视化\n\n"
+        
+        # 确保图表路径正确处理
+        if chart_paths:
+            # 固定使用'charts'作为文件夹名称，因为图表生成器总是在工作空间下创建charts子目录
+            chart_folder_name = 'charts'
+            
+            # 添加消费类别分布图
+            if len(chart_paths) > 0:
+                chart_filename = os.path.basename(chart_paths[0])
+                # 强制使用charts前缀的路径
+                chart_path = f"charts/{chart_filename}"
+                chart_sections += "### 消费类别分布\n\n"
+                chart_sections += f"![消费类别分布]({chart_path})\n\n"
+                print(f"使用图表路径: {chart_path}")
+            
+            # 添加消费趋势图
+            if len(chart_paths) > 1:
+                chart_filename = os.path.basename(chart_paths[1])
+                # 强制使用charts前缀的路径
+                chart_path = f"charts/{chart_filename}"
+                chart_sections += "### 消费趋势分析\n\n"
+                chart_sections += f"![消费趋势分析]({chart_path})\n\n"
+                print(f"使用图表路径: {chart_path}")
+            
+            # 添加收支总览图
+            if len(chart_paths) > 2:
+                chart_filename = os.path.basename(chart_paths[2])
+                # 强制使用charts前缀的路径
+                chart_path = f"charts/{chart_filename}"
+                chart_sections += "### 收支总览\n\n"
+                chart_sections += f"![收支总览]({chart_path})\n\n"
+                print(f"使用图表路径: {chart_path}")
+    
     # 构建完整的分析报告Markdown内容
     full_report = f"""
 # 用户消费行为分析报告
@@ -151,6 +205,8 @@ def analyze_and_plan(user_id: int, consumptions: List[Consumption], save_to_file
 - **用户ID**: {user_id}
 - **分析时间**: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 - **分析记录数**: {len(consumptions)}
+
+{chart_sections}
 
 ## 消费行为分析
 {analysis}
@@ -171,9 +227,6 @@ def analyze_and_plan(user_id: int, consumptions: List[Consumption], save_to_file
     
     # 保存为文件（如果启用）
     if save_to_files:
-        # 生成文件名前缀，包含用户ID和时间戳
-        filename_prefix = f"user_{user_id}_analysis_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-        
         # 使用MCP工具保存并转换文件
         file_paths = save_markdown_and_convert_to_pdf(full_report, filename_prefix)
         
@@ -181,7 +234,8 @@ def analyze_and_plan(user_id: int, consumptions: List[Consumption], save_to_file
         result.update({
             "md_file_path": file_paths["md_path"],
             "pdf_file_path": file_paths["pdf_path"],
-            "workspace_dir": file_paths["workspace_dir"]
+            "workspace_dir": file_paths["workspace_dir"],
+            "chart_paths": chart_paths
         })
     
     return result

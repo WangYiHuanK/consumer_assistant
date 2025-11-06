@@ -3,10 +3,12 @@ uvicorn==0.38.0
 pydantic==2.5.0
 pydantic-settings==2.1.0
 python-dotenv==1.0.0
+matplotlib==3.7.1
 tortoise-orm==0.25.0
 aiosqlite==0.19.0  # SQLite支持（开发环境）
 asyncpg==0.29.0   # PostgreSQL支持（生产环境）
 fastmcp==2.13.0.2
+numpy==1.24.3
 pandas==2.3.3
 langchain_core==1.0.3
 langchain_openai==1.0.2

@@ -3,6 +3,7 @@ from typing import List, Optional
 from datetime import datetime, date
 from tortoise.expressions import Q
 from app.models.consumption import Consumption
+from app.database import ensure_db_connection
 
 
 class ConsumptionDAO:
@@ -11,16 +12,19 @@ class ConsumptionDAO:
     @staticmethod
     async def get_by_id(consumption_id: int) -> Optional[Consumption]:
         """根据ID获取消费记录"""
+        await ensure_db_connection()
         return await Consumption.get_or_none(id=consumption_id, is_deleted=False)
     
     @staticmethod
     async def create(consumption_data: dict) -> Consumption:
         """创建消费记录"""
+        await ensure_db_connection()
         return await Consumption.create(**consumption_data)
     
     @staticmethod
     async def update(consumption_id: int, update_data: dict) -> Optional[Consumption]:
         """更新消费记录"""
+        await ensure_db_connection()
         consumption = await Consumption.get_or_none(id=consumption_id, is_deleted=False)
         if consumption:
             await consumption.update_from_dict(update_data)
@@ -30,6 +34,7 @@ class ConsumptionDAO:
     @staticmethod
     async def delete(consumption_id: int) -> bool:
         """软删除消费记录"""
+        await ensure_db_connection()
         consumption = await Consumption.get_or_none(id=consumption_id, is_deleted=False)
         if consumption:
             await consumption.soft_delete()
@@ -39,6 +44,7 @@ class ConsumptionDAO:
     @staticmethod
     async def get_by_user(user_id: int, page: int = 1, page_size: int = 20) -> tuple[List[Consumption], int]:
         """获取用户的消费记录列表"""
+        await ensure_db_connection()
         offset = (page - 1) * page_size
         
         # 查询总数
@@ -62,6 +68,7 @@ class ConsumptionDAO:
         category: Optional[str] = None
     ) -> List[Consumption]:
         """按日期范围查询消费记录"""
+        await ensure_db_connection()
         # 构建查询条件
         conditions = Q(user_id=user_id) & Q(is_deleted=False)
         
@@ -88,6 +95,7 @@ class ConsumptionDAO:
         transaction_type: str = "支出"
     ) -> dict:
         """获取按分类统计的消费数据"""
+        await ensure_db_connection()
         # 查询指定条件的所有记录
         records = await ConsumptionDAO.get_by_date_range(
             user_id=user_id,

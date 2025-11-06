@@ -1,6 +1,6 @@
 from langchain_ollama import OllamaLLM
 import os
-from app.configs.config import config
+from app.settings.config import config
 
 # 初始化本地部署的大模型（使用Ollama部署的qwen2.5:7b）
 llm = OllamaLLM(

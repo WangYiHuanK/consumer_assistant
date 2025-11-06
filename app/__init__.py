@@ -4,14 +4,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
 # 导入配置
-from app.configs.config import config
+from app.settings.config import config
 
 # 导入数据库配置和操作
 from app.database import init_db, close_db, check_database_connection
 
 # 导入API路由和响应函数
 from app.api import api_router
-from app.configs.response import success_response
+from app.settings.response import success_response
 
 
 @asynccontextmanager

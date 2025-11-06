@@ -16,7 +16,7 @@ class Config:
     
     # 服务器配置
     HOST: str = os.getenv("HOST", "0.0.0.0")
-    PORT: int = int(os.getenv("PORT", "8000"))
+    PORT: int = int(os.getenv("PORT", "8001"))
     
     # 数据库配置
     DATABASE_URL: str = os.getenv("DATABASE_URL", "postgres://postgres:qwer1234@localhost:5432/consumer_assistant_db")

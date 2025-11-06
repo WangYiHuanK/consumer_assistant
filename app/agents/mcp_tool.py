@@ -78,10 +78,19 @@ class MCPTool:
         Returns:
             生成的PDF文件路径
         """
-        # 如果提供了Markdown文件路径，则读取该文件
+        # 确保有Markdown文件路径，这对于正确解析相对路径的图片很重要
         if md_file_path and os.path.exists(md_file_path):
+            # 如果提供了现有文件，使用它
+            actual_md_path = md_file_path
             with open(md_file_path, 'r', encoding='utf-8') as f:
                 markdown_content = f.read()
+        else:
+            # 否则创建一个临时Markdown文件
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            temp_md_filename = f"temp_pdf_conversion_{timestamp}.md"
+            actual_md_path = os.path.join(self.workspace_dir, temp_md_filename)
+            with open(actual_md_path, 'w', encoding='utf-8') as f:
+                f.write(markdown_content)
         
         # 如果没有提供文件名，则生成一个包含时间戳的文件名
         if not filename:
@@ -94,6 +103,9 @@ class MCPTool:
         
         # 构建完整的文件路径
         pdf_path = os.path.join(self.workspace_dir, filename)
+        
+        # 获取Markdown文件所在目录，作为图片的基础URL
+        base_url = f"file://{os.path.dirname(os.path.abspath(actual_md_path))}/"
         
         # 将Markdown转换为HTML
         html_content = markdown.markdown(markdown_content, extensions=[
@@ -156,6 +168,12 @@ class MCPTool:
                     margin-left: 0;
                     color: #666;
                 }}
+                img {{
+                    max-width: 100%;
+                    height: auto;
+                    display: block;
+                    margin: 20px auto;
+                }}
             </style>
         </head>
         <body>
@@ -164,8 +182,8 @@ class MCPTool:
         </html>
         """
         
-        # 将HTML转换为PDF
-        HTML(string=html_content).write_pdf(pdf_path)
+        # 将HTML转换为PDF，使用base_url参数确保图片正确加载
+        HTML(string=html_content, base_url=base_url).write_pdf(pdf_path)
         
         print(f"PDF文件已生成: {pdf_path}")
         return pdf_path
@@ -188,8 +206,8 @@ class MCPTool:
         # 保存Markdown文件
         md_path = self.markdown_to_file(markdown_content, f"{filename_prefix}.md")
         
-        # 转换为PDF文件
-        pdf_path = self.markdown_to_pdf(markdown_content, f"{filename_prefix}.pdf")
+        # 转换为PDF文件，传入md_file_path参数以便正确处理图片路径
+        pdf_path = self.markdown_to_pdf(None, f"{filename_prefix}.pdf", md_file_path=md_path)
         
         return {
             "md_path": md_path,

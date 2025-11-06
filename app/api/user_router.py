@@ -5,7 +5,7 @@ from app.schemas.user_schemas import User, UserCreate, UserUpdate
 from tortoise.contrib.pydantic import pydantic_model_creator
 from app.models.user import User as UserModel
 from app.dao import UserDAO
-from app.configs.response import success_response, error_response, paginate_response
+from app.settings.response import success_response, error_response, paginate_response
 
 # 创建用户相关的路由器
 user_router = APIRouter(prefix="/users", tags=["users"])

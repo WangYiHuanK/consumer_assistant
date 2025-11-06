@@ -5,7 +5,7 @@ from datetime import date
 from app.schemas.consumption_schemas import Consumption, ConsumptionCreate, ConsumptionUpdate
 from app.models.consumption import Consumption as ConsumptionModel
 from app.dao import ConsumptionDAO, UserDAO
-from app.configs.response import success_response, error_response, paginate_response
+from app.settings.response import success_response, error_response, paginate_response
 
 # 创建消费行为相关的路由器
 consumption_router = APIRouter(prefix="/consumptions", tags=["consumptions"])
