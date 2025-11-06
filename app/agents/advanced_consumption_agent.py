@@ -33,11 +33,17 @@ class AdvancedConsumptionAgent(BaseAgent):
         # 初始化DAO
         self.consumption_dao = ConsumptionDAO()
         
-        # 初始化图表生成器
-        from app.utils.chart_generator import get_chart_generator
+        # 初始化工作目录
         current_dir = os.path.dirname(os.path.abspath(__file__))
         workspace_dir = os.path.normpath(os.path.join(current_dir, '..', '..', 'workspace'))
+        
+        # 初始化图表生成器
+        from app.utils.chart_generator import get_chart_generator
         self.chart_generator = get_chart_generator(workspace_dir)
+        
+        # 初始化动态图表生成器
+        from app.utils.dynamic_chart_generator import DynamicChartGenerator
+        self.dynamic_chart_generator = DynamicChartGenerator(workspace_dir)
     
     def _init_prompt_templates(self):
         """
@@ -262,16 +268,31 @@ class AdvancedConsumptionAgent(BaseAgent):
         
         return filtered
     
-    def generate_charts(self, consumptions: List[Consumption]) -> Dict[str, str]:
+    def generate_charts(self, consumptions: List[Consumption], analysis_needs: str = None) -> Dict[str, str]:
         """
         生成图表
         
         Args:
             consumptions: 消费记录
+            analysis_needs: 用户分析需求（可选）
         
         Returns:
             图表路径字典
         """
+        # 如果有分析需求，使用动态图表生成
+        if analysis_needs and self.dynamic_chart_generator:
+            print(f"使用动态图表生成器，根据需求：{analysis_needs}")
+            try:
+                # 生成符合分析需求的图表
+                chart_paths = self.dynamic_chart_generator.generate_charts_by_needs(
+                    consumptions, analysis_needs
+                )
+                return chart_paths
+            except Exception as e:
+                print(f"动态图表生成失败，回退到默认图表: {str(e)}")
+                # 出错时回退到默认图表生成
+        
+        # 无分析需求或动态生成失败时，使用默认图表生成器
         chart_paths = self.chart_generator.generate_all_charts(consumptions)
         return chart_paths
     
@@ -555,124 +576,132 @@ class AdvancedConsumptionAgent(BaseAgent):
         return "\n".join(lines)
     
     async def analyze_by_custom_needs(self, user_id: int, start_date: str, end_date: str, 
-                              analysis_needs: str) -> Dict[str, Any]:
+                               analysis_needs: str) -> Dict[str, Any]:
         """
-        根据用户自定义需求进行分析（异步方法）
+        根据用户自定义需求进行消费分析
         
         Args:
             user_id: 用户ID
             start_date: 开始日期
             end_date: 结束日期
-            analysis_needs: 用户分析需求
+            analysis_needs: 用户的分析需求
         
         Returns:
-            分析结果
+            分析结果字典
         """
-        # 生成分析计划
+        # 生成任务规划
         plan = self.plan(analysis_needs, start_date, end_date)
         
-        # 如果没有生成有效计划，使用默认计划
+        # 确保有任务规划
         if not plan:
+            # 使用默认任务规划
             plan = [
                 {
-                    "id": "1",
-                    "description": "获取消费数据",
+                    "task_id": "1",
+                    "task_name": "获取消费数据",
                     "tool": "fetch_consumption_data",
-                    "tool_params": {"user_id": user_id, "start_date": start_date, "end_date": end_date},
-                    "priority": "高",
-                    "expected_result": "获取指定时间范围内的消费记录"
+                    "params": {
+                        "user_id": user_id,
+                        "start_date": start_date,
+                        "end_date": end_date
+                    }
                 },
                 {
-                    "id": "2",
-                    "description": "生成可视化图表",
+                    "task_id": "2",
+                    "task_name": "生成可视化图表",
                     "tool": "generate_charts",
-                    "tool_params": {},
-                    "priority": "中",
-                    "expected_result": "生成消费类别分布、趋势和收支总览图"
+                    "params": {}
                 },
                 {
-                    "id": "3",
-                    "description": "进行个性化分析",
+                    "task_id": "3",
+                    "task_name": "进行个性化分析",
                     "tool": "analyze_data",
-                    "tool_params": {"analysis_needs": analysis_needs},
-                    "priority": "高",
-                    "expected_result": "根据用户需求生成详细分析"
+                    "params": {
+                        "analysis_needs": analysis_needs
+                    }
                 },
                 {
-                    "id": "4",
-                    "description": "生成最终报告",
+                    "task_id": "4",
+                    "task_name": "生成最终报告",
                     "tool": "generate_report",
-                    "tool_params": {"user_id": user_id, "start_date": start_date, "end_date": end_date},
-                    "priority": "高",
-                    "expected_result": "生成包含分析和图表的Markdown和PDF报告"
+                    "params": {
+                        "user_id": user_id,
+                        "start_date": start_date,
+                        "end_date": end_date
+                    }
                 }
             ]
         
-        # 存储中间结果
-        intermediate_results = {}
+        # 初始化任务执行状态
+        execution_status = {}
+        result_data = {}
         
-        # 执行计划
+        # 执行任务规划
         for task in plan:
-            task_id = task.get('id')
-            tool_name = task.get('tool')
-            tool_params = task.get('tool_params', {})
-            
-            print(f"执行任务 {task_id}: {task.get('description')}")
+            task_id = task.get("task_id", task.get("id"))
+            task_name = task.get("task_name", task.get("description"))
+            tool_name = task.get("tool")
+            params = task.get("params", {}) or task.get("tool_params", {})
             
             try:
-                # 根据任务ID调整参数，使用之前的结果
-                if task_id == "2":  # 生成图表需要消费数据
-                    tool_params['consumptions'] = intermediate_results.get('1', {}).get('result', [])
-                elif task_id == "3":  # 分析数据需要消费数据
-                    tool_params['consumptions'] = intermediate_results.get('1', {}).get('result', [])
-                elif task_id == "4":  # 生成报告需要分析结果和图表
-                    # 安全获取分析结果
-                    analysis_result = intermediate_results.get('3', {}).get('result', '')
-                    # 安全获取图表路径，接受任何类型
-                    chart_paths = intermediate_results.get('2', {}).get('result', [])
-                    
-                    tool_params['analysis_result'] = analysis_result
-                    tool_params['chart_paths'] = chart_paths
+                print(f"执行任务 {task_id}: {task_name}")
                 
-                # 执行工具（处理异步和同步方法）
+                # 根据工具名称调用相应的方法
                 if tool_name == "fetch_consumption_data":
-                    # 直接调用异步方法
-                    result = await getattr(self, tool_name)(**tool_params)
-                else:
-                    # 其他同步方法
-                    result = getattr(self, tool_name)(**tool_params)
+                    # 获取消费数据
+                    params = {**params, "user_id": user_id, "start_date": start_date, "end_date": end_date}
+                    consumptions = await self.fetch_consumption_data(**params)
+                    result_data["consumptions"] = consumptions
+                    
+                elif tool_name == "filter_data":
+                    # 过滤数据
+                    params = {**params, "consumptions": result_data.get("consumptions", [])}
+                    filtered_consumptions = self.filter_data(**params)
+                    result_data["consumptions"] = filtered_consumptions
+                    
+                elif tool_name == "generate_charts":
+                    # 生成图表（添加分析需求参数以支持动态图表生成）
+                    params = {**params, "consumptions": result_data.get("consumptions", []), "analysis_needs": analysis_needs}
+                    chart_paths = self.generate_charts(**params)
+                    result_data["chart_paths"] = chart_paths
+                    
+                elif tool_name == "analyze_data":
+                    # 分析数据
+                    params = {**params, "consumptions": result_data.get("consumptions", []), "analysis_needs": analysis_needs}
+                    analysis_result = self.analyze_data(**params)
+                    result_data["analysis_result"] = analysis_result
+                    
+                elif tool_name == "generate_suggestions":
+                    # 生成建议
+                    params = {**params, "analysis_result": result_data.get("analysis_result", "")}
+                    suggestions = self.generate_suggestions(**params)
+                    result_data["suggestions"] = suggestions
+                    
+                elif tool_name == "market_research":
+                    # 市场研究
+                    market_info = self.market_research(**params)
+                    result_data["market_info"] = market_info
+                    
+                elif tool_name == "generate_report":
+                    # 生成报告
+                    params = {**params, "analysis_result": result_data.get("analysis_result", ""), 
+                             "chart_paths": result_data.get("chart_paths", {}), "user_id": user_id}
+                    report_paths = self.generate_report(**params)
+                    result_data["report_paths"] = report_paths
                 
-                # 存储结果
-                intermediate_results[task_id] = {
-                    "success": True,
-                    "result": result
-                }
+                # 更新任务执行状态
+                execution_status[task_id] = "成功"
                 
             except Exception as e:
-                intermediate_results[task_id] = {
-                    "success": False,
-                    "error": str(e)
-                }
-                print(f"任务 {task_id} 执行失败: {e}")
-                # 继续执行其他任务
-        
-        # 准备最终结果，确保返回正确的结构
+                print(f"任务 {task_id} 执行失败: {str(e)}")
+                execution_status[task_id] = f"失败: {str(e)}"
+                
+        # 构建最终结果
         final_result = {
+            "analysis_needs": analysis_needs,
             "plan": plan,
-            "execution_results": intermediate_results,
-            "report_paths": None
-        }
-        
-        # 如果生成了报告，将其路径添加到结果中
-        report_result = intermediate_results.get('4', {}).get('result')
-        if report_result and isinstance(report_result, dict):
-            final_result["report_paths"] = report_result
-        
-        # 返回最终结果
-        final_result = {
-            "plan": plan,
-            "execution_results": intermediate_results,
-            "report_paths": intermediate_results.get('4', {}).get('result', {})
+            "execution_status": execution_status,
+            "result_data": result_data
         }
         
         return final_result
